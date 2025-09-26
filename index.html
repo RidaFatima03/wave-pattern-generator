@@ -1,0 +1,226 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generative Pastel Pattern Maker — by Rida Fatima</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800;900&family=Nunito:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    :root{
+      --bg1:#f8e9ff; --bg2:#ffeaf5; --ink:#3d2d4e; --muted:#6c5a7a; --card:#ffffffee;
+      --accent:#bb86fc; --accent2:#ff9ad5; --accent3:#ffd6f0; --ring:#e7d7ff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:'Nunito',system-ui,sans-serif; color:var(--ink);
+      background:
+        radial-gradient(40rem 40rem at 10% 10%, var(--bg2), transparent 60%),
+        radial-gradient(50rem 40rem at 90% 20%, var(--bg1), transparent 60%),
+        linear-gradient(135deg,#fff 0%, #fff0 100%);
+      padding:22px;
+    }
+    .wrap{width:min(1200px,96vw); margin:0 auto}
+    header{text-align:center; margin-bottom:14px}
+    h1{font-family:'Poppins',system-ui; font-weight:900; font-size:clamp(28px,4vw,46px); margin:0 0 6px}
+    .subtle{color:var(--muted)}
+    .card{background:var(--card); backdrop-filter:blur(6px); border:1px solid #f1e8ff; border-radius:24px; box-shadow:0 10px 24px rgba(112,79,164,.15); overflow:hidden}
+    .pad{padding:16px}
+    .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center; margin-bottom:10px}
+    .btn{padding:10px 14px; border-radius:14px; border:1px solid #e9d6ff; background:linear-gradient(180deg, var(--accent3), #fff); font-weight:800; cursor:pointer; box-shadow:0 2px 0 #e7d7ff}
+    .btn.primary{background:linear-gradient(180deg,#f0dcff,#ffe7f6)}
+    .input{padding:10px 12px; border-radius:12px; border:1px solid #eedbff; background:#fff; font-size:14px}
+    .panel{display:grid; grid-template-columns:1fr; gap:16px; padding:12px}
+    .stage{display:grid; grid-template-rows:auto 1fr auto; min-height:100%}
+    .stageheader{display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:1px dashed #f0dfff; background:conic-gradient(from 180deg,#fff,#fff8ff,#fff)}
+    .canvasBox{position:relative; display:grid; place-items:center; background:#fff; border-radius:18px; border:1px solid #eedbff; box-shadow:0 6px 0 #e7d7ff; overflow:hidden; width:100%}
+    footer{margin-top:16px; text-align:center; color:var(--muted); font-size:14px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Generative Pastel Pattern Maker</h1>
+      <div class="subtle">Procedural backgrounds • PNG export • by <strong>Rida Fatima</strong></div>
+    </header>
+
+    <section class="card pad">
+      <div class="controls">
+        <select id="mode" class="input">
+          <option value="waves">Waves</option>
+          <option value="bubbles">Bubbles</option>
+          <option value="grid">Grid</option>
+          <option value="flowers">Flowers</option>
+          <option value="ribbons">Ribbons</option>
+        </select>
+        <button class="btn primary" id="newBtn">🎨 New Pattern</button>
+        <button class="btn" id="downloadBtn">⬇️ Download PNG</button>
+        <span class="subtle">Tip: Press <b>N</b> to randomize</span>
+      </div>
+
+      <div class="panel">
+        <div class="stage">
+          <div class="stageheader"><strong>Canvas</strong><span class="subtle">Auto-resizes with window</span></div>
+          <div class="canvasBox"><div id="sketch-holder"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>© <span id="year"></span> Rida Fatima</footer>
+  </div>
+
+<script>
+document.getElementById('year').textContent = new Date().getFullYear();
+
+let PAL;
+const PALETTES = [
+  ['#ffeaf5','#ffd6f0','#c3e1ff','#c0ffd9','#fff3da'],
+  ['#f3e8ff','#e9d5ff','#d8b4fe','#a78bfa','#ffd6e3'],
+  ['#e0f7ff','#ccf0f8','#c0ffd9','#9ad7ff','#ffd9f0'],
+];
+
+function pickPalette(){ PAL = random(PALETTES); }
+
+let modeSel;
+let cnv;
+
+function setup(){
+  const holder = document.getElementById('sketch-holder');
+  const w = Math.min(1100, window.innerWidth*0.92);
+  const h = Math.round(w*0.56);
+  cnv = createCanvas(w, h);
+  cnv.parent(holder);
+  noLoop();
+  modeSel = document.getElementById('mode');
+  pickPalette();
+  redrawPattern();
+}
+
+function windowResized(){
+  const w = Math.min(1100, window.innerWidth*0.92);
+  const h = Math.round(w*0.56);
+  resizeCanvas(w, h);
+  redrawPattern();
+}
+
+function keyPressed(){
+  if (key === 'N' || key === 'n') { newPattern(); }
+}
+
+function newPattern(){
+  pickPalette();
+  redrawPattern();
+}
+
+function redrawPattern(){
+  const mode = modeSel.value;
+  background('#ffffff');
+  if (mode === 'waves') drawWaves();
+  if (mode === 'bubbles') drawBubbles();
+  if (mode === 'grid') drawGrid();
+  if (mode === 'flowers') drawFlowers();
+  if (mode === 'ribbons') drawRibbons();
+}
+
+function randIn(arr){ return arr[floor(random(arr.length))]; }
+
+function drawWaves(){
+  noStroke();
+  const layers = 8;
+  for (let i=0; i<layers; i++){
+    fill(color(randIn(PAL) + 'CC'));
+    const amp = random(10, 50);
+    const freq = random(0.005, 0.02);
+    beginShape();
+    vertex(0, height);
+    for (let x=0; x<=width; x+=10){
+      const y = height*0.2 + i*(height*0.1) + sin(x*freq + i)*amp;
+      vertex(x, y);
+    }
+    vertex(width, height);
+    endShape(CLOSE);
+  }
+}
+
+function drawBubbles(){
+  noStroke();
+  const n = 120;
+  for (let i=0; i<n; i++){
+    const r = random(8, 70);
+    const x = random(r, width - r);
+    const y = random(r, height - r);
+    fill(color(randIn(PAL) + 'B8'));
+    circle(x, y, r*2);
+  }
+}
+
+function drawGrid(){
+  const cols = int(random(8, 18));
+  const rows = int(cols * 0.56);
+  const cw = width/cols, rh = height/rows;
+  for (let cy=0; cy<rows; cy++){
+    for (let cx=0; cx<cols; cx++){
+      const x = cx*cw, y = cy*rh;
+      stroke('#eedbff'); strokeWeight(1);
+      fill(color(randIn(PAL) + (random() < 0.35 ? '80' : '30')));
+      rect(x+1, y+1, cw-2, rh-2, 8);
+      if (random() < 0.12){
+        noFill(); stroke(randIn(PAL)); strokeWeight(3);
+        arc(x+cw/2, y+rh/2, cw*0.6, rh*0.6, random(TWO_PI), random(TWO_PI));
+      }
+    }
+  }
+}
+
+function flower(x,y,s,rot){
+  push();
+  translate(x,y); rotate(rot);
+  noStroke();
+  const petals = int(random(5,9));
+  for (let i=0; i<petals; i++){
+    fill(randIn(PAL));
+    const a = TWO_PI * i / petals;
+    const px = cos(a) * s, py = sin(a) * s;
+    ellipse(px, py, s*1.2, s*0.6);
+  }
+  fill('#fff'); circle(0,0,s*0.6);
+  pop();
+}
+
+function drawFlowers(){
+  background('#fff');
+  for (let i=0; i<60; i++){
+    flower(random(width), random(height), random(6, 26), random(TWO_PI));
+  }
+}
+
+function drawRibbons(){
+  noFill();
+  background('#fff');
+  for (let k=0; k<10; k++){
+    stroke(randIn(PAL)); strokeWeight(random(10,26)); strokeCap(ROUND);
+    let x = random(width), y = random(height);
+    beginShape();
+    for (let i=0; i<40; i++){
+      curveVertex(x,y);
+      x += random(-40,40);
+      y += random(-30,30);
+      x = constrain(x, 0, width);
+      y = constrain(y, 0, height);
+    }
+    endShape();
+  }
+}
+
+// Buttons
+document.addEventListener('click', (e)=>{
+  if (e.target && e.target.id === 'newBtn') newPattern();
+  if (e.target && e.target.id === 'downloadBtn') {
+    const link = document.createElement('a');
+    link.download = 'pastel-pattern.png';
+    link.href = cnv.elt.toDataURL('image/png');
+    link.click();
+  }
+});
+</script>
+</body>
+</html>
